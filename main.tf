@@ -12,7 +12,7 @@ resource "aws_sns_topic" "ebs_alerts" {
 resource "aws_sns_topic_subscription" "security_email" {
   topic_arn = aws_sns_topic.ebs_alerts.arn
   protocol  = "email"
-  endpoint  = "security-team@example.com" # change to your email
+  endpoint  = "saptorshi98@gmail.com" # change to your email
 }
 
 ############################
@@ -96,13 +96,12 @@ resource "aws_cloudwatch_event_rule" "ebs_create_volume" {
   name        = "EBSCreateVolumeRule"
   description = "Triggers on EBS CreateVolume events"
   event_pattern = jsonencode({
-    "source"      : ["aws.ec2"],
-    "detail-type" : ["AWS API Call via CloudTrail"],
-    "detail"      : {
-      "eventSource": ["ec2.amazonaws.com"],
-      "eventName"  : ["CreateVolume"]
-    }
-  })
+  "source": ["aws.ec2"],
+  "detail-type": ["EBS Volume Notification"],
+  "detail": {
+    "event": ["createVolume"]
+  }
+})
 }
 
 resource "aws_cloudwatch_event_target" "send_to_lambda" {
