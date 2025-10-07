@@ -7,6 +7,6 @@ resource "aws_sns_topic" "ebs_alerts" {
 
 resource "aws_sns_topic_subscription" "security_email" {
   topic_arn = aws_sns_topic.ebs_alerts.arn
-  protocol  = var.aws_sns_topic_subscription_protocol
+  protocol  = "email"
   endpoint  = var.aws_sns_topic_subscription_endpoint
 }
