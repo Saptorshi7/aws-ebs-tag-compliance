@@ -38,3 +38,8 @@ variable "eventbridge_name" {
     type = string
     default = "EBSCreateVolumeRule"
 }
+
+variable "aws_region" {
+    type = string
+    default = "us-east-1"
+}
