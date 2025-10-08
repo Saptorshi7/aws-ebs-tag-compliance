@@ -1,3 +1,7 @@
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
 ############################
 # IAM Role + Policy for Lambda
 ############################
@@ -25,8 +29,13 @@ resource "aws_iam_role_policy" "lambda_policy" {
     Statement = [
       {
         Effect   = "Allow",
-        Action   = ["ec2:DescribeVolumes", "ec2:CreateTags"],
+        Action   = ["ec2:DescribeVolumes"],
         Resource = "*"
+      },
+      {
+        Effect   = "Allow",
+        Action   = ["ec2:CreateTags"],
+        Resource = "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:volume/*"
       },
       {
         Effect   = "Allow",
@@ -40,7 +49,14 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ],
-        Resource = "*"
+        Resource = "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:*"
+      },
+      {
+        Effect   = "Allow",
+        Action   = [
+          "sqs:SendMessage"
+        ],
+        Resource = var.aws_sqs_queue_arn
       }
     ]
   })

@@ -5,7 +5,8 @@ variable "aws_sns_topic_name" {
 
 variable "aws_sns_topic_subscription_endpoint" {
     type = string
-    default = "saptorshi.pal@atos.net"
+    # default = "saptorshi.pal@atos.net"
+    default = "saptorshi98@gmail.com"
 }
 
 variable "aws_iam_role_policy_name" {
