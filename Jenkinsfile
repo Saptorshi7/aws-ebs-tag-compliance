@@ -8,10 +8,20 @@ pipeline {
     }
 
     stages {
-        stage('Terraform Init & Plan') {
+        stage('Terraform Init') {
             steps {
                 sh '''
                   terraform init
+                '''
+            }
+        }
+
+        stage('Terraform Plan') {
+            when {
+                expression { return params.ACTION == 'plan' || params.ACTION == 'apply' }
+            }
+            steps {
+                sh '''
                   terraform plan -out=tfplan
                 '''
             }
@@ -19,7 +29,7 @@ pipeline {
 
         stage('Terraform Apply') {
             when {
-                expression { return params.APPLY == true }
+                expression { return params.ACTION == 'apply' }
             }
             steps {
                 sh '''
@@ -30,7 +40,7 @@ pipeline {
 
         stage('Terraform Destroy') {
             when {
-                expression { return params.DESTROY == true }
+                expression { return params.ACTION == 'destroy' }
             }
             steps {
                 sh '''
@@ -46,5 +56,5 @@ pipeline {
             choices: ['plan', 'apply', 'destroy'],
             description: 'Choose Terraform action to perform'
         )
-    }
+    }   
 }
