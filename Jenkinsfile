@@ -6,6 +6,7 @@ pipeline {
         AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
         TF_CLI_ARGS            = "-no-color"
         LAMBDA_FUNCTION_NAME  = 'EBSBackupFrequencyChecker'
+        AWS_REGION            = "us-east-1"
     }
 
     stages {
