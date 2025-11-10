@@ -11,7 +11,6 @@ pipeline {
         stage('Terraform Init & Plan') {
             steps {
                 sh '''
-                  cd terraform
                   terraform init
                   terraform plan -out=tfplan
                 '''
@@ -24,7 +23,6 @@ pipeline {
             }
             steps {
                 sh '''
-                  cd terraform
                   terraform apply --auto-approve tfplan
                 '''
             }
@@ -36,7 +34,6 @@ pipeline {
             }
             steps {
                 sh '''
-                  cd terraform
                   terraform destroy --auto-approve
                 '''
             }
