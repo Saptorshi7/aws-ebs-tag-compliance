@@ -5,9 +5,20 @@ pipeline {
         AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')
         AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
         TF_CLI_ARGS            = "-no-color"
+        LAMBDA_FUNCTION_NAME  = 'EBSBackupFrequencyChecker'
     }
 
     stages {
+        stage('Validate Parameters') {
+            steps {
+                script {
+                    if (params.TRIGGER_LAMBDA && params.ACTION != 'apply') {
+                        error("❌ Invalid selection: TRIGGER_LAMBDA can only be true when ACTION=apply.")
+                    }
+                }
+            }
+        }
+
         stage('Terraform Init') {
             steps {
                 sh '''
