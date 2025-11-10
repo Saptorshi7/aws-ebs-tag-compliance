@@ -41,7 +41,10 @@ pipeline {
     }
 
     parameters {
-        booleanParam(name: 'APPLY', defaultValue: true, description: 'Apply Terraform changes')
-        booleanParam(name: 'DESTROY', defaultValue: false, description: 'Destroy Terraform-managed resources')
+        choice(
+            name: 'ACTION',
+            choices: ['plan', 'apply', 'destroy'],
+            description: 'Choose Terraform action to perform'
+        )
     }
 }
