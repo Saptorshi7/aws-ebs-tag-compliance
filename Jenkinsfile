@@ -38,6 +38,27 @@ pipeline {
             }
         }
 
+        stage('Trigger Lambda') {
+            when {
+                allOf {
+                    expression { return params.ACTION == 'apply' }
+                    expression { return params.TRIGGER_LAMBDA == true }
+                }
+            }
+            steps {
+                echo "Invoking Lambda function: ${LAMBDA_FUNCTION_NAME}"
+                sh '''
+                  aws lambda invoke \
+                    --function-name "$LAMBDA_FUNCTION_NAME" \
+                    --region "$AWS_REGION" \
+                    --payload '{}' \
+                    lambda_output.json
+                  echo "Lambda invoked. Output:"
+                  cat lambda_output.json
+                '''
+            }
+        }
+
         stage('Terraform Destroy') {
             when {
                 expression { return params.ACTION == 'destroy' }
@@ -55,6 +76,11 @@ pipeline {
             name: 'ACTION',
             choices: ['plan', 'apply', 'destroy'],
             description: 'Choose Terraform action to perform'
+        )
+        booleanParam(
+            name: 'TRIGGER_LAMBDA',
+            defaultValue: false,
+            description: 'Trigger the EBS compliance Lambda after apply?'
         )
     }   
 }
