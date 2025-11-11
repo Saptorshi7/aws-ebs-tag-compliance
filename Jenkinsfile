@@ -62,7 +62,7 @@ pipeline {
                 echo "Invoking Lambda function: ${LAMBDA_FUNCTION_NAME}"
                 sh '''
                   VOLUMES=$(aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==`backup_frequency`]==null].VolumeId' --output json)
-                  VOLUME_ARNS=$(echo $VOLUMES | jq -r '.[] | "arn:aws:ec2:'$AWS_REGION':'$ACCOUNT_ID':volume/\(.VolumeId)"')
+                  VOLUME_ARNS=$(echo $VOLUMES | jq -r ".[] | \"arn:aws:ec2:$REGION:$ACCOUNT_ID:volume/\(.VolumeId)\"")
                   PAYLOAD=$(echo "{\"resources\": [$VOLUME_ARNS]}" | jq -s .)
                   aws lambda invoke \
                     --function-name "$LAMBDA_FUNCTION_NAME" \
