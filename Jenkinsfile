@@ -59,19 +59,41 @@ pipeline {
                 }
             }
             steps {
-                echo "Invoking Lambda function: ${LAMBDA_FUNCTION_NAME}"
-                sh '''
-                  VOLUMES=$(aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==`backup_frequency`]==null].VolumeId' --output json)
-                  VOLUME_ARNS=$(echo $VOLUMES | jq -r ".[] | \"arn:aws:ec2:$REGION:$ACCOUNT_ID:volume/\(.VolumeId)\"")
-                  PAYLOAD=$(echo "{\"resources\": [$VOLUME_ARNS]}" | jq -s .)
-                  aws lambda invoke \
-                    --function-name "$LAMBDA_FUNCTION_NAME" \
-                    --region "$AWS_REGION" \
-                    --payload "$PAYLOAD" \
-                    lambda_output.json
-                  echo "Lambda invoked. Output:"
-                  cat lambda_output.json
-                '''
+                script {
+                    // Get the volumes missing the 'backup_frequency' tag using AWS CLI
+                    def volumes = sh(script: """
+                        aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==\`backup_frequency\`]==null].VolumeId' --output json
+                    """, returnStdout: true).trim()
+
+                    // Check if volumes are empty
+                    if (volumes == "[]") {
+                        echo "No volumes missing the 'backup_frequency' tag."
+                        return
+                    }
+
+                    // Format the volumes as ARNs and build the payload
+                    def volumeArns = sh(script: """
+                        echo '$volumes' | jq -r '.[] | "arn:aws:ec2:${REGION}:${ACCOUNT_ID}:volume/\(.VolumeId)"'
+                    """, returnStdout: true).trim()
+
+                    // Build the final payload
+                    def payload = """{"resources": [${volumeArns}]}"""
+                    
+                    // Print the payload to verify
+                    echo "Generated payload: ${payload}"
+
+                    // Invoke the Lambda function
+                    sh(script: """
+                        aws lambda invoke \
+                            --function-name your-lambda-function-name \
+                            --payload '${payload}' \
+                            output.txt
+                    """)
+
+                    // Print the output from the invocation
+                    def output = readFile('output.txt')
+                    echo "Lambda output: ${output}"
+                }
             }
         }
 
