@@ -59,41 +59,35 @@ pipeline {
                 }
             }
             steps {
-                script {
-            // Step 1: Get all EBS volumes that do not have a 'BackupFrequency' tag
-            sh '''
-                echo "🔍 Retrieving EBS volumes without required tags in region ${AWS_REGION}..."
+        sh '''
+            echo "🔍 Checking for untagged EBS volumes in region ${AWS_REGION}..."
 
-                aws ec2 describe-volumes \
-                    --region ${AWS_REGION} \
-                    --query "Volumes[?!(Tags && Tags[?Key=='BackupFrequency'])].{ID:VolumeId}" \
-                    --output json > untagged_volumes.json
+            aws ec2 describe-volumes \
+                --region ${AWS_REGION} \
+                --query "Volumes[?!(Tags && Tags[?Key=='BackupFrequency'])].{ID:VolumeId}" \
+                --output json > untagged_volumes.json
 
-                echo "📄 Untagged Volumes Found:"
-                cat untagged_volumes.json
-            '''
+            COUNT=$(jq '. | length' untagged_volumes.json)
+            echo "Found $COUNT untagged volumes."
 
-            // Step 2: Check if any untagged volumes were found
-            def untaggedVolumes = readJSON file: 'untagged_volumes.json'
-            if (untaggedVolumes.size() == 0) {
-                echo "✅ No untagged volumes found. Skipping Lambda invocation."
-            } else {
-                echo "⚡ Invoking Lambda for untagged volumes..."
-                writeJSON file: 'lambda_payload.json', json: [volumes: untaggedVolumes]
+            if [ "$COUNT" -eq 0 ]; then
+                echo "✅ No untagged volumes found. Skipping Lambda."
+                exit 0
+            fi
 
-                sh '''
-                    aws lambda invoke \
-                      --function-name ${LAMBDA_FUNCTION_NAME} \
-                      --region ${AWS_REGION} \
-                      --payload file://lambda_payload.json \
-                      lambda_output.json
+            echo "⚡ Invoking Lambda with untagged volume list..."
+            jq -n --argfile volumes untagged_volumes.json '{volumes: $volumes}' > lambda_payload.json
 
-                    echo "Lambda invoked successfully. Response:"
-                    cat lambda_output.json
-                '''
-            }
-                }
-            }
+            aws lambda invoke \
+              --function-name ${LAMBDA_FUNCTION_NAME} \
+              --region ${AWS_REGION} \
+              --payload file://lambda_payload.json \
+              lambda_output.json
+
+            echo "Lambda invocation result:"
+            cat lambda_output.json
+        '''
+    }
         }
 
         stage('Terraform Destroy') {
