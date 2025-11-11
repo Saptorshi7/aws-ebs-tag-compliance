@@ -8,6 +8,7 @@ pipeline {
         LAMBDA_FUNCTION_NAME  = 'EBSBackupFrequencyChecker'
         AWS_REGION            = "us-east-1"
         ACCOUNT_ID            = "636361317523"
+        SNS_TOPIC_ARN         = "arn:aws:sns:us-east-1:636361317523:EBSMissingTagAlerts"
     }
 
     stages {
@@ -50,6 +51,42 @@ pipeline {
                 '''
             }
         }
+
+        stage('Wait for SNS Subscription Confirmation') {
+            when {
+                expression { params.ACTION == 'apply' }
+            }
+            steps {
+                script {
+                    echo "⏳ Checking SNS subscriptions for topic: ${SNS_TOPIC_ARN}"
+
+                    timeout(time: 5, unit: 'MINUTES') {
+                        waitUntil {
+                            def status = sh(
+                                script: """
+                                    aws sns list-subscriptions-by-topic \
+                                      --topic-arn ${SNS_TOPIC_ARN} \
+                                      --region ${AWS_REGION} \
+                                      --query "Subscriptions[?SubscriptionArn!='PendingConfirmation'].SubscriptionArn" \
+                                      --output text
+                                """,
+                                returnStdout: true
+                            ).trim()
+
+                            if (status) {
+                                echo "✅ Subscription confirmed: ${status}"
+                                return true
+                            } else {
+                                echo "⚠️ Subscription still pending confirmation. Please check your email and confirm."
+                                sleep 20
+                                return false
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
 
         stage('Trigger Lambda') {
             when {
