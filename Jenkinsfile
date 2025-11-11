@@ -75,21 +75,27 @@ pipeline {
                 exit 0
             fi
 
-            echo "⚡ Invoking Lambda with untagged volume list..."
+            # Read the first few untagged volumes
+            echo "⚡ Preparing payloads and invoking Lambda..."
 
-            # Construct payload manually (works with jq 1.5)
-            PAYLOAD=$(cat untagged_volumes.json | jq -c '{volumes: .}')
-            echo "$PAYLOAD" > lambda_payload.json
+            for VOL_ID in $(jq -r '.[].ID' untagged_volumes.json); do
+                PAYLOAD=$(jq -nc --arg vol_arn "arn:aws:ec2:${AWS_REGION}:${ACCOUNT_ID}:volume/${VOL_ID}" '{resources: [$vol_arn]}')
 
-            aws lambda invoke \
-              --function-name ${LAMBDA_FUNCTION_NAME} \
-              --region ${AWS_REGION} \
-              --payload file://lambda_payload.json \
-              lambda_output.json \
-              --cli-binary-format raw-in-base64-out
+                echo "Invoking Lambda for volume ${VOL_ID}..."
+                echo "$PAYLOAD" > lambda_payload.json
+                cat lambda_payload.json
 
-            echo "Lambda invocation result:"
-            cat lambda_output.json
+                aws lambda invoke \
+                  --function-name ${LAMBDA_FUNCTION_NAME} \
+                  --region ${AWS_REGION} \
+                  --payload file://lambda_payload.json \
+                  lambda_output.json \
+                  --cli-binary-format raw-in-base64-out
+
+                echo "Lambda output for ${VOL_ID}:"
+                cat lambda_output.json
+                echo ""
+            done
         '''
     }
         }
