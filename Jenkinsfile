@@ -60,39 +60,38 @@ pipeline {
             }
             steps {
                 script {
-                    // Escape backticks properly for Groovy and shell command
-                    def volumes = sh(script: """
-                        aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==\`backup_frequency\`]==null].VolumeId' --output json
-                    """, returnStdout: true).trim()
+            // Step 1: Get all EBS volumes that do not have a 'BackupFrequency' tag
+            sh '''
+                echo "🔍 Retrieving EBS volumes without required tags in region ${AWS_REGION}..."
 
-                    // Check if volumes are empty
-                    if (volumes == "[]") {
-                        echo "No volumes missing the 'backup_frequency' tag."
-                        return
-                    }
+                aws ec2 describe-volumes \
+                    --region ${AWS_REGION} \
+                    --query "Volumes[?!(Tags && Tags[?Key=='BackupFrequency'])].{ID:VolumeId}" \
+                    --output json > untagged_volumes.json
 
-                    // Format the volumes as ARNs and build the payload
-                    def volumeArns = sh(script: """
-                        echo '$volumes' | jq -r '.[] | \\"arn:aws:ec2:${REGION}:${ACCOUNT_ID}:volume/\(.VolumeId)\\"'
-                    """, returnStdout: true).trim()
+                echo "📄 Untagged Volumes Found:"
+                cat untagged_volumes.json
+            '''
 
-                    // Build the final payload
-                    def payload = """{"resources": [${volumeArns}]}"""
-                    
-                    // Print the payload to verify
-                    echo "Generated payload: ${payload}"
+            // Step 2: Check if any untagged volumes were found
+            def untaggedVolumes = readJSON file: 'untagged_volumes.json'
+            if (untaggedVolumes.size() == 0) {
+                echo "✅ No untagged volumes found. Skipping Lambda invocation."
+            } else {
+                echo "⚡ Invoking Lambda for untagged volumes..."
+                writeJSON file: 'lambda_payload.json', json: [volumes: untaggedVolumes]
 
-                    // Invoke the Lambda function
-                    sh(script: """
-                        aws lambda invoke \
-                            --function-name your-lambda-function-name \
-                            --payload '${payload}' \
-                            output.txt
-                    """)
+                sh '''
+                    aws lambda invoke \
+                      --function-name ${LAMBDA_FUNCTION_NAME} \
+                      --region ${AWS_REGION} \
+                      --payload file://lambda_payload.json \
+                      lambda_output.json
 
-                    // Print the output from the invocation
-                    def output = readFile('output.txt')
-                    echo "Lambda output: ${output}"
+                    echo "Lambda invoked successfully. Response:"
+                    cat lambda_output.json
+                '''
+            }
                 }
             }
         }
