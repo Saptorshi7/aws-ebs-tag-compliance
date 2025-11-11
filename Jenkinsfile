@@ -60,7 +60,7 @@ pipeline {
             }
             steps {
                 script {
-                    // Get the volumes missing the 'backup_frequency' tag using AWS CLI
+                    // Escape backticks for Groovy and shell
                     def volumes = sh(script: """
                         aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==\`backup_frequency\`]==null].VolumeId' --output json
                     """, returnStdout: true).trim()
@@ -73,7 +73,7 @@ pipeline {
 
                     // Format the volumes as ARNs and build the payload
                     def volumeArns = sh(script: """
-                        echo '$volumes' | jq -r '.[] | "arn:aws:ec2:${REGION}:${ACCOUNT_ID}:volume/\(.VolumeId)"'
+                        echo '$volumes' | jq -r '.[] | \"arn:aws:ec2:${REGION}:${ACCOUNT_ID}:volume/\(.VolumeId)\"'
                     """, returnStdout: true).trim()
 
                     // Build the final payload
