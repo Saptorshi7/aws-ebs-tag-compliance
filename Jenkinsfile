@@ -7,6 +7,7 @@ pipeline {
         TF_CLI_ARGS            = "-no-color"
         LAMBDA_FUNCTION_NAME  = 'EBSBackupFrequencyChecker'
         AWS_REGION            = "us-east-1"
+        ACCOUNT_ID            = "636361317523"
     }
 
     stages {
@@ -60,10 +61,13 @@ pipeline {
             steps {
                 echo "Invoking Lambda function: ${LAMBDA_FUNCTION_NAME}"
                 sh '''
+                  VOLUMES=$(aws ec2 describe-volumes --query 'Volumes[?Tags[?Key==`backup_frequency`]==null].VolumeId' --output json)
+                  VOLUME_ARNS=$(echo $VOLUMES | jq -r '.[] | "arn:aws:ec2:'$AWS_REGION':'$ACCOUNT_ID':volume/\(.VolumeId)"')
+                  PAYLOAD=$(echo "{\"resources\": [$VOLUME_ARNS]}" | jq -s .)
                   aws lambda invoke \
                     --function-name "$LAMBDA_FUNCTION_NAME" \
                     --region "$AWS_REGION" \
-                    --payload '{}' \
+                    --payload "$PAYLOAD" \
                     lambda_output.json
                   echo "Lambda invoked. Output:"
                   cat lambda_output.json
