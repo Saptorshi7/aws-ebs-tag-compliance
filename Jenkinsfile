@@ -76,7 +76,10 @@ pipeline {
             fi
 
             echo "⚡ Invoking Lambda with untagged volume list..."
-            jq -n --argfile volumes untagged_volumes.json '{volumes: $volumes}' > lambda_payload.json
+            
+            # Construct payload manually (works with jq 1.5)
+            PAYLOAD=$(cat untagged_volumes.json | jq -c '{volumes: .}')
+            echo "$PAYLOAD" > lambda_payload.json
 
             aws lambda invoke \
               --function-name ${LAMBDA_FUNCTION_NAME} \
