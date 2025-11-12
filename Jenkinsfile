@@ -4,11 +4,12 @@ pipeline {
     environment {
         AWS_ACCESS_KEY_ID     = credentials('aws_access_key_id')
         AWS_SECRET_ACCESS_KEY = credentials('aws_secret_access_key')
-        TF_CLI_ARGS            = "-no-color"
+        AWS_SESSION_TOKEN     = credentials('aws_session_token')
+        TF_CLI_ARGS           = "-no-color"
         LAMBDA_FUNCTION_NAME  = 'EBSBackupFrequencyChecker'
         AWS_REGION            = "us-east-1"
-        ACCOUNT_ID            = "636361317523"
-        SNS_TOPIC_ARN         = "arn:aws:sns:us-east-1:636361317523:EBSMissingTagAlerts"
+        ACCOUNT_ID            = "361509912577"
+        SNS_TOPIC_ARN         = "arn:aws:sns:us-east-1:361509912577:EBSMissingTagAlerts"
     }
 
     stages {
